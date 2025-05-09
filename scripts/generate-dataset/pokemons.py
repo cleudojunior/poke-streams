@@ -17,15 +17,15 @@ def get_all_pokemon_data():
         if pokemon_response.status_code == 200:
             data = pokemon_response.json()
             pokemon_info = {
-                "id": data["id"],
+                "id": int(data["id"]),
                 "name": data["name"],
                 "type_1": data["types"][0]["type"]["name"],
                 "type_2": data["types"][1]["type"]["name"] if len(data["types"]) > 1 else "",
                 "img_url": data["sprites"]["front_default"],
-                "hp": data["stats"][0]["base_stat"],
-                "attack": data["stats"][1]["base_stat"],
-                "defense": data["stats"][2]["base_stat"],
-                "speed": data["stats"][5]["base_stat"]
+                "hp": int(data["stats"][0]["base_stat"]),
+                "attack": int(data["stats"][1]["base_stat"]),
+                "defense": int(data["stats"][2]["base_stat"]),
+                "speed": int(data["stats"][5]["base_stat"])
             }
             pokemon_data.append(pokemon_info)
             print(f"Collected: {data['name']}")
