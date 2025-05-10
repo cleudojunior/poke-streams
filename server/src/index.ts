@@ -113,7 +113,7 @@ createServer(async (req, res) => {
   const offset = rangeStart ?? 0;
 
   let items = 0;
-  let consumedBytes = 0;
+  let consumedBytes = offset;
   const incrementItems = () => items++;
   const byteCounter = (bytes: number) => consumedBytes += bytes;
   const abortController = new AbortController()

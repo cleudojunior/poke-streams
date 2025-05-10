@@ -12,7 +12,7 @@ async function fetchApi(signal, writableStream) {
   const reader = response.body
     .pipeThrough(new TextDecoderStream())
     .pipeThrough(parseNDJSON())
-    .pipeTo(writableStream)
+    .pipeTo(writableStream, { signal: abortController.signal })
   return reader
 }
 
@@ -49,7 +49,6 @@ function parseNDJSON() {
       const jsonChunk = JSON.parse(chunk)
       const data = jsonChunk.data
       startOffset = jsonChunk.totalBytes
-      console.log(startOffset)
       ndjsonBuffer += data
       const items = ndjsonBuffer.split('\n')
       items.slice(0, -1).forEach(item => controller.enqueue(JSON.parse(item)))
@@ -67,7 +66,12 @@ const [cards, start, stop] = ['cards', 'start', 'stop'].map((item) => document.g
 
 let abortController = new AbortController()
 start.addEventListener('click', async () => {
-  await fetchApi(abortController.signal, appendToHTML(cards))
+  try {
+    
+    await fetchApi(abortController.signal, appendToHTML(cards))
+  } catch (err) {
+    if (err.name !== 'AbortError') throw err
+  }
 })
 
 stop.addEventListener('click', () => {
