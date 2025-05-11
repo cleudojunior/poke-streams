@@ -1,8 +1,7 @@
 import { createReadStream, ReadStream } from "node:fs";
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
-import { Transform, Writable } from "node:stream";
+import { Writable } from "node:stream";
 import { pipeline as pipelinePromise } from "node:stream/promises";
-import { setTimeout } from "node:timers/promises";
 
 type HandleCsvHeaders = () => { get(): string[], set(keys: string[]): void }
 
@@ -48,16 +47,15 @@ const createWritableStream = (
 }
 
 async function consumePokemons(
-  fileName: string, 
   start: number, 
   byteCounter: (bytes: number) => number,
   setHeaders: (keys: string[]) => void, 
   getHeaders: () => string[], 
+  readable: ReadStream,
   writable: Writable,
   abortController: AbortController,
   
 ) {
-  const readable = createReadStream(fileName, { start });
 
   async function * lineSplitter (source: ReadStream) {
     let buffer = '';
@@ -132,11 +130,13 @@ createServer(async (req, res) => {
   }
 
   const range = req.headers.range
-  const startRange = range ? Number(range.split('=')[1].split('-')[0]) : 0
+  const CHUNK_SIZE = 3000;
+  const start = range ? Number(range.split('=')[1].split('-')[0]) : 0
+  const end = start + CHUNK_SIZE
 
   let items = 0;
   const incrementItems = () => items++;
-  let consumedBytes = startRange;
+  let consumedBytes = start;
   const byteCounter = (bytes: number) => consumedBytes += bytes;
 
   const abortController = new AbortController()
@@ -147,27 +147,20 @@ createServer(async (req, res) => {
     abortController.abort()
   });
 
+  const filename = '../datasets/pokemons.csv';
   
+  const readable = createReadStream(filename, { start, end });
   const writable = createWritableStream(res, incrementItems)
 
   consumePokemons(
-    '../datasets/pokemons.csv', 
-    startRange,
+    start,
     byteCounter,
     handleCsvHeadersInstance.set, 
     handleCsvHeadersInstance.get, 
+    readable,
     writable,
     abortController,
   )
-
-  //Readable.toWeb(createReadStream('../datasets/pokemons.csv', { start: offset}))
-  //.pipeThrough(Transform.toWeb(createLineSplitter()))
-  //.pipeThrough(Transform.toWeb(createTransformStream(handleCsvHeadersInstance.set, handleCsvHeadersInstance.get, byteCounter, offset)))
-  //.pipeTo(Writable.toWeb(createWritableStream(res, abortController.signal, incrementItems)))
-  //.catch((err) => {
-  //  if (err.name !== 'AbortError') throw err
-  //  console.log(err.message)
-  //})
 
   res.writeHead(200, headers)
 })

@@ -1,6 +1,5 @@
 const API_URL = 'http://localhost:3000'
 
-let totalItems = 0;
 let startOffset = 0;
 let abortController = new AbortController()
 
@@ -45,12 +44,6 @@ function appendToHTML(element) {
       </ul>
       `
       element.insertAdjacentHTML('beforeend', card)
-
-      totalItems++
-      if (totalItems > 50) {
-        totalItems = 0
-        abortController.abort('Internal buffer is full.')
-      }
     },
     abort() {
       console.log('Stream aborted')
@@ -94,7 +87,6 @@ stop.addEventListener('click', () => {
 
 
 window.addEventListener('scroll', async () => {
-  console.log('scrolling...')
   if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
     try {
       await fetchApi(abortController.signal, appendToHTML(cards))
