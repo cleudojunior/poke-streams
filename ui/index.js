@@ -1,6 +1,9 @@
 const API_URL = 'http://localhost:3000'
 
+let totalItems = 0;
 let startOffset = 0;
+let abortController = new AbortController()
+
 async function fetchApi(signal, writableStream) {
   const response = await fetch(API_URL, {
     signal,
@@ -9,16 +12,18 @@ async function fetchApi(signal, writableStream) {
     }
   })
 
-  const reader = response.body
+  response.body
     .pipeThrough(new TextDecoderStream())
     .pipeThrough(parseNDJSON())
     .pipeTo(writableStream, { signal: abortController.signal })
-  return reader
 }
 
 function appendToHTML(element) {
   return new WritableStream({
-    write({ name, hp, attack, defense, speed, img_url, type_1 }) {
+    write({ data, totalBytes }) {
+      const { name, hp, attack, defense, speed, img_url, type_1 } = data
+      startOffset = totalBytes
+
       const card = `
       <ul>
         <li>
@@ -40,6 +45,16 @@ function appendToHTML(element) {
       </ul>
       `
       element.insertAdjacentHTML('beforeend', card)
+
+      totalItems++
+      if (totalItems > 50) {
+        totalItems = 0
+        abortController.abort('Internal buffer is full.')
+      }
+    },
+    abort() {
+      console.log('Stream aborted')
+      abortController = new AbortController()
     }
   })
 }
@@ -48,10 +63,7 @@ function parseNDJSON() {
   let ndjsonBuffer = ''
   return new TransformStream({
     transform(chunk, controller) {
-      const jsonChunk = JSON.parse(chunk)
-      const data = jsonChunk.data
-      startOffset = jsonChunk.totalBytes
-      ndjsonBuffer += data
+      ndjsonBuffer += chunk
       const items = ndjsonBuffer.split('\n')
       items.slice(0, -1).forEach(item => controller.enqueue(JSON.parse(item)))
 
@@ -66,12 +78,11 @@ function parseNDJSON() {
 
 const [cards, start, stop] = ['cards', 'start', 'stop'].map((item) => document.getElementById(item))
 
-let abortController = new AbortController()
 start.addEventListener('click', async () => {
   try {
-    
     await fetchApi(abortController.signal, appendToHTML(cards))
   } catch (err) {
+    console.log(err.name)
     if (err.name !== 'AbortError') throw err
   }
 })
@@ -79,5 +90,16 @@ start.addEventListener('click', async () => {
 stop.addEventListener('click', () => {
   abortController.abort()
   console.log('aborting...')
-  abortController = new AbortController()
 })
+
+
+window.addEventListener('scroll', async () => {
+  console.log('scrolling...')
+  if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight) {
+    try {
+      await fetchApi(abortController.signal, appendToHTML(cards))
+    } catch (err) {
+      if (err.name !== 'AbortError') throw err
+    }
+  }
+});
