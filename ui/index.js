@@ -20,22 +20,24 @@ function appendToHTML(element) {
   return new WritableStream({
     write({ name, hp, attack, defense, speed, img_url, type_1 }) {
       const card = `
-      <section>
-        <div class="pokemon ${type_1}">
-          <h3 class="pokemon-name">${name}</h3>
-          <div class="pokemon-info">
-            <div class="pokemon-stats">
-              <span class="stats-text">Hp: ${hp}</span>
-              <span class="stats-text">Attack: ${attack}</span>
-              <span class="stats-text">Defense: ${defense}</span>
-              <span class="stats-text">Speed: ${speed}</span>
-            </div>
-            <div class="pokemon-img">
-              <img src="${img_url}" alt="${name} image">
+      <ul>
+        <li>
+          <div class="pokemon ${type_1}">
+            <h3 class="pokemon-name">${name}</h3>
+            <div class="pokemon-info">
+              <div class="pokemon-stats">
+                <span class="stats-text">Hp: ${hp}</span>
+                <span class="stats-text">Attack: ${attack}</span>
+                <span class="stats-text">Defense: ${defense}</span>
+                <span class="stats-text">Speed: ${speed}</span>
+              </div>
+              <div class="pokemon-img">
+                <img src="${img_url}" alt="${name} image">
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </li>
+      </ul>
       `
       element.insertAdjacentHTML('beforeend', card)
     }
